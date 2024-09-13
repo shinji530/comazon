@@ -23,6 +23,27 @@ model User {
   updatedAt DateTime @updatedAt
 }
 
+model Product {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  category    Category
+  price       Float
+  stock       Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum Category {
+  FASHION
+  BEAUTY
+  SPORTS
+  ELECTRONICS
+  HOME_INTERIOR
+  HOUSEHOLD_SUPPLIES
+  KITCHENWARE
+}
+
 // Int, Float, Boolean <- RDBMS
 // Nullable NULL이 들어갈 수 있다. - 선택적 필드
-// required -> Non-nullable 필드
+// required -> Non-nullable이 들어갈 수 없다. - 필수 필드

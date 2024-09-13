@@ -2,7 +2,7 @@ GET http://localhost:3000/users
 
 ###
 
-GET http://localhost:3000/users/60c8860a-90df-4814-9750-2b7f8a48f55d
+GET http://localhost:3000/users/b8f11e76-0a9e-4b3f-bccf-8d9b4fbf331e
 
 ###
 
