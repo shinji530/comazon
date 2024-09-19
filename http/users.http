@@ -2,7 +2,11 @@ GET http://localhost:3000/users
 
 ###
 
-GET http://localhost:3000/users/b8f11e76-0a9e-4b3f-bccf-8d9b4fbf331e
+GET http://localhost:3000/users?order=oldest
+
+###
+
+GET http://localhost:3000/users/73cb9639-d8b7-4f11-9a62-53f4187f3f11/orders
 
 ###
 
@@ -13,16 +17,22 @@ Content-Type: application/json
   "email": "yjkim@example.com", 
   "firstName": "유진",
   "lastName": "김",
-  "address": "충청북도 청주시 북문로 210번길 5"
+  "address": "충청북도 청주시 북문로 210번길 5",
+  "userPreference": {
+    "receiveEmail": false
+  }
 }
 
 ###
 
-PATCH http://localhost:3000/users/ecc95488-b6a3-4ab9-997b-b630f4dc8f71
+PATCH http://localhost:3000/users/0de2edf7-f816-4648-80b1-8982ba0165ca
 Content-Type: application/json
 
 {
-  "address": "서울특별시 강남구 무실로 234번길 45-6"
+  "address": "서울특별시 강남구 무실로 234번길 45-6",
+  "userPreference": {
+    "receiveEmail": true
+  }
 }
 
 ###
