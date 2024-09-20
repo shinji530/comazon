@@ -1,14 +1,16 @@
 import * as dotenv from 'dotenv';
 dotenv.config();
 import express from 'express';
+import cors from 'cors';
 import { Prisma, PrismaClient } from '@prisma/client';
-import { assert, create } from 'superstruct';
-import { CreateUser, PatchUser, CreateProduct, PatchProduct, CreateOrder, PatchOrder } from './structs.js';
+import { assert } from 'superstruct';
+import { CreateUser, PatchUser, CreateProduct, PatchProduct, CreateOrder, PatchOrder, PostSavedProduct } from './structs.js';
 
 const prisma = new PrismaClient();
 
 const app = express();
 app.use(express.json());
+app.use(cors());
 
 function asyncHandler(handler) {
   const newHandler = async function (req, res) {
@@ -119,14 +121,35 @@ app.delete('/users/:id', asyncHandler( async (req, res) => {
 
 app.get('/users/:id/saved-products', asyncHandler( async (req, res) => {
   const { id } = req.params;
-  const user = await prisma.user.findUniqueOrThrow({
+  const { savedProducts } = await prisma.user.findUniqueOrThrow({
     where: { id },
     include: {
       savedProducts: true,
     }
   });
-  res.send(user.savedProducts);
+  res.send(savedProducts);
 }));
+
+app.post('/users/:id/saved-products', asyncHandler( async (req, res) => {
+  assert(req.body, PostSavedProduct);
+  const { id: userId } = req.params;
+  const { productId } = req.body;
+  const user = await prisma.user.update({
+    where: { id: userId },
+    data: {
+      savedProducts: {
+        connect: { 
+          id: productId 
+        },
+      }
+    },
+    include: {
+      savedProducts: true,
+    }
+  });
+  res.send(user);
+}));
+
 
 app.get('/users/:id/orders', asyncHandler( async (req, res) => {
   const { id } = req.params;
@@ -232,17 +255,64 @@ app.get('/orders/:id', asyncHandler(async (req, res) => {
 app.post('/orders', asyncHandler(async (req, res) => {
   assert(req.body, CreateOrder);
   const { orderItems, ...orderFields } = req.body;
-  const order = await prisma.order.create({
-    data: {
-      ...orderFields,
-      orderItems: {
-        create: orderItems,
-      },
-    },
-    include: {
-      orderItems: true,
-    },
+
+  // 배열 메소드 충분히 활용
+  const productIds = orderItems.map((orderItem) => orderItem.productId);
+
+  const products = await prisma.product.findMany({
+    where: { id: { in: productIds, }, },
   });
+
+  // helper
+  function getQuantity(productId) {
+    return orderItems.find((orderItem) => orderItem.productId === productId).quantity;
+  }
+
+  const isSufficientStock = products.every((product) => {
+    const { id, stock } = product;
+    return stock >= getQuantity(id);
+  });
+
+  if (!isSufficientStock) {
+    throw new Error('Insufficient stock');
+  };
+
+  // const order = await prisma.order.create({
+  //   data: {
+  //     ...orderFields,
+  //     orderItems: {
+  //       create: orderItems,
+  //     },
+  //   },
+  //   include: {
+  //     orderItems: true,
+  //   },
+  // });
+
+  const queries = productIds.map((productId) => 
+    prisma.product.update({
+      where: { id: productId },
+      data: { stock: { decrement: getQuantity(productId) } },
+    })
+  );
+
+  const [order] = await prisma.$transaction([
+    prisma.order.create({
+      data: {
+        ...orderFields,
+        orderItems: {
+          create: orderItems,
+        },
+      },
+      include: {
+        orderItems: true,
+      },
+    }),
+    ...queries,
+  ]);
+  
+  // await Promise.all(queries);
+
   res.status(201).send(order);
 }));
 
